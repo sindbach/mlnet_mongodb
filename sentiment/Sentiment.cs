@@ -1,0 +1,198 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.ML;
+using Microsoft.ML.Data;
+using Microsoft.ML.Models;
+using Microsoft.ML.Runtime.Api;
+using Microsoft.ML.Trainers;
+using Microsoft.ML.Transforms;
+using MongoDB.Bson;
+using MongoDB.Driver;
+using MongoDB.Bson.Serialization.Attributes;
+
+namespace SentimentAnalysis
+{
+    [BsonIgnoreExtraElements]
+    public class SentimentData
+    {
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string Id {get; set;}
+        [BsonElement("sentiment")]
+        public float Label { get; set; }
+        public string text { get; set; }
+    }
+
+    public class SentimentPrediction
+    {
+        [ColumnName("PredictedLabel")]
+        public bool sentiment { get; set; }
+    }
+
+    class Program
+    {
+
+        static readonly MongoClient client = new MongoClient("mongodb+srv://demo:demo@dataset-zhoqm.mongodb.net");
+        static readonly string _modelpath = Path.Combine(Environment.CurrentDirectory, "Model.zip");
+
+        static async Task Main(string[] args)
+        {
+            var database = client.GetDatabase("yelp");
+            var model = await Train(database);
+
+            // <Snippet12>
+            Evaluate(model, database);
+            // </Snippet12>
+            
+            // <Snippet17>
+            Predict(model, database);
+            // </Snippet17>
+        }
+
+        public static async Task<PredictionModel<SentimentData, SentimentPrediction>> Train(IMongoDatabase db)
+        {
+            // LearningPipeline allows you to add steps in order to keep everything together 
+            // during the learning process.  
+            // <Snippet5>
+            var pipeline = new LearningPipeline();
+            // </Snippet5>
+
+            // <Snippet6>
+            var collection = db.GetCollection<SentimentData>("review_train");
+            var documents = collection.Find<SentimentData>(new BsonDocument()).ToEnumerable();
+            pipeline.Add(CollectionDataSource.Create(documents));
+            // </Snippet6>
+
+            // TextFeaturizer is a transform that is used to featurize an input column. 
+            // This is used to format and clean the data.
+            // <Snippet7>
+            pipeline.Add(new TextFeaturizer("Features", "text"){
+                    KeepDiacritics = false,
+                    KeepPunctuations = false,
+                    TextCase = TextNormalizerTransformCaseNormalizationMode.Lower,
+            });
+            //</Snippet7>
+
+            // Adds a FastTreeBinaryClassifier, the decision tree learner for this project, and 
+            // three hyperparameters to be used for tuning decision tree performance.
+            // <Snippet8>
+            pipeline.Add(new FastTreeBinaryClassifier() { NumLeaves = 100, 
+                                                          NumTrees = 50, 
+                                                          MinDocumentsInLeafs = 2,
+                                                          LearningRates = 0.4f,});
+            // </Snippet8>
+
+            // Train the pipeline based on the dataset that has been loaded, transformed.
+            // <Snippet9>
+            PredictionModel<SentimentData, SentimentPrediction> model =
+                pipeline.Train<SentimentData, SentimentPrediction>();
+            // </Snippet9>
+
+            // Saves the model we trained to a zip file.
+            // <Snippet10>
+            await model.WriteAsync(_modelpath);
+            // </Snippet10>
+
+            // Returns the model we trained to use for evaluation.
+            // <Snippet11>
+            return model;
+            // </Snippet11>
+        }
+
+        public static void Evaluate(PredictionModel<SentimentData, SentimentPrediction> model, IMongoDatabase db)
+        {
+            // Evaluates.
+            // <Snippet13>
+            var collection = db.GetCollection<SentimentData>("review_test");
+            var documents = collection.Find<SentimentData>(new BsonDocument()).ToEnumerable();
+            var testData = CollectionDataSource.Create(documents);
+            // </Snippet13>
+
+            // BinaryClassificationEvaluator computes the quality metrics for the PredictionModel
+            // using the specified data set.
+            // <Snippet14>
+            var evaluator = new BinaryClassificationEvaluator();
+            // </Snippet14>
+
+            // BinaryClassificationMetrics contains the overall metrics computed by binary classification evaluators.
+            // <Snippet15>
+            BinaryClassificationMetrics metrics = evaluator.Evaluate(model, testData);
+            // </Snippet15>
+
+            // The Accuracy metric gets the accuracy of a classifier, which is the proportion 
+            // of correct predictions in the test set.
+
+            // The Auc metric gets the area under the ROC curve.
+            // The area under the ROC curve is equal to the probability that the classifier ranks
+            // a randomly chosen positive instance higher than a randomly chosen negative one
+            // (assuming 'positive' ranks higher than 'negative').
+
+            // The F1Score metric gets the classifier's F1 score.
+            // The F1 score is the harmonic mean of precision and recall:
+            //  2 * precision * recall / (precision + recall).
+
+            // <Snippet16>
+            Console.WriteLine();
+            Console.WriteLine("PredictionModel quality metrics evaluation");
+            Console.WriteLine("------------------------------------------");
+            Console.WriteLine($"Accuracy: {metrics.Accuracy:P2}");
+            Console.WriteLine($"Auc: {metrics.Auc:P2}");
+            Console.WriteLine($"F1Score: {metrics.F1Score:P2}");
+            // </Snippet16>
+        }
+
+        public static void Predict(PredictionModel<SentimentData, SentimentPrediction> model, IMongoDatabase db)
+        {
+            // Adds some comments to test the trained model's predictions.
+            // <Snippet18>
+            IEnumerable<SentimentData> sentiments = new[]
+            {
+                new SentimentData
+                {
+                    text = "Very bad service and low quality of coffee too. Waiting for so long even tried to rush them already."
+                },
+                new SentimentData
+                {
+                    text = "This place is amazing!! I had the classic cheese burger with fries.  Hands down the best burger I have ever had"
+                }, 
+                new SentimentData 
+                {
+                    text = "If I could give zero stars I would. Terribly overpriced. Dried over cooked barramundi with no seasoning or flavor at all"
+                }, 
+                new SentimentData 
+                {
+                    text = "Small menu but the food is quite good. It's fast and easy, one of the better options around the area. We had the seafood laksa and seafood Pad Kee Mao"
+                }
+            };
+            // </Snippet18>
+
+            // Use the model to predict the positive 
+            // or negative sentiment of the comment data.
+            // <Snippet19>
+            IEnumerable<SentimentPrediction> predictions = model.Predict(sentiments);
+            // </Snippet19>
+
+            // <Snippet20>
+            Console.WriteLine();
+            Console.WriteLine("Sentiment Predictions");
+            Console.WriteLine("---------------------");
+            // </Snippet20>
+
+            // Builds pairs of (sentiment, prediction)
+            // <Snippet21>
+            var sentimentsAndPredictions = sentiments.Zip(predictions, (sentiment, prediction) => (sentiment, prediction));
+            // </Snippet21>
+
+            // <Snippet22>
+            foreach (var item in sentimentsAndPredictions)
+            {
+                Console.WriteLine($"Sentiment: {item.sentiment.text} | Prediction: {(item.prediction.sentiment ? "Positive" : "Negative")}");
+            }
+            Console.WriteLine();
+            // </Snippet22>          
+        }
+    }
+}
