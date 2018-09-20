@@ -15,6 +15,8 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace SentimentAnalysis
 {
+
+    // A class representation of review collection
     [BsonIgnoreExtraElements]
     public class SentimentData
     {
@@ -34,8 +36,8 @@ namespace SentimentAnalysis
 
     class Program
     {
-
-        static readonly MongoClient client = new MongoClient("mongodb+srv://demo:demo@dataset-zhoqm.mongodb.net");
+        static string mongoURI = "mongodb+srv://demo:demo@dataset-zhoqm.mongodb.net";
+        static readonly MongoClient client = new MongoClient(mongoURI);
         static readonly string _modelpath = Path.Combine(Environment.CurrentDirectory, "Model.zip");
 
         static async Task Main(string[] args)

@@ -26,10 +26,10 @@ RUN export uid=1000 gid=1000 && \
 
 ENV HOME /home/ubuntu
 
-RUN mkdir ${HOME}/example
-COPY example ${HOME}/example
+RUN mkdir ${HOME}/sentiment
+COPY sentiment ${HOME}/sentiment
 
-RUN chown -R ubuntu ${HOME}/example && chmod -R 750 ${HOME}/example
+RUN chown -R ubuntu ${HOME}/sentiment && chmod -R 750 ${HOME}/sentiment
 
 USER ubuntu
 WORKDIR ${HOME}
