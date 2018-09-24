@@ -42,8 +42,8 @@ By default the code will read from a MongoDB Atlas M0 shared instance (lowest sp
 In the [data](./data) directory, you can find two example dataset in JSON format. You can load these files into any MongoDB deployment using `mongoimport`. For example: 
 
 ```sh
-mongoimport --uri "mongodb+srv://user:pwd@dataset-zh.mongodb.net/yelp" --collection review_train ./review_train.json 
-mongoimport --uri "mongodb+srv://user:pwd@dataset-zh.mongodb.net/yelp" --collection review_test ./review_test.json 
+mongoimport --uri "mongodb+srv://user:pwd@dataset-demo.mongodb.net/yelp" --collection review_train ./review_train.json 
+mongoimport --uri "mongodb+srv://user:pwd@dataset-demo.mongodb.net/yelp" --collection review_test ./review_test.json 
 ```
 
 
