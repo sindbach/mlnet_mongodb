@@ -12,7 +12,7 @@ RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor 
 RUN echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-bionic-prod bionic main" > /etc/apt/sources.list.d/dotnetdev.list
 
 RUN apt-get update && apt-get install -y \
-    dotnet-sdk-2.1 && \
+    dotnet-sdk-2.2 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
