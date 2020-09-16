@@ -7,7 +7,7 @@ This repository is based on [dotnet: machine-learning tutorials - Sentiment Anal
 
 ## Setup: Docker
 
-A Dockerfile is included in this repo to help setup the environment. The Dockerfile is based on Ubuntu 18.04 image with `.NET Core` version 2.1. By default the project will be built using [MongoDB C#/.NET driver](http://mongodb.github.io/mongo-csharp-driver/) version 2.7.0. 
+A Dockerfile is included in this repo to help setup the environment. The Dockerfile is based on Ubuntu 18.04 image with `.NET Core` version 2.2. By default the project will be built using [MongoDB C#/.NET driver](http://mongodb.github.io/mongo-csharp-driver/) version 2.11.0. 
 
 Note that the given code example has been tested only against the default MongoDB Driver version. There is no guarantee that the code sample will work for all possible versions of the driver.
 
